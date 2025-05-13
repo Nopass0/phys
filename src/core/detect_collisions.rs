@@ -5,9 +5,9 @@ use crate::collision::broad_phase::BroadPhase;
 use crate::math::Vector3;
 use crate::shapes::{Sphere, box_shape::BoxShape};
 
-/// An overly aggressive floor collision detection function
-/// This implementation prioritizes preventing objects from falling through the floor
-/// at all costs, even if it means sacrificing some physical accuracy
+/// A realistic collision detection function with proper physical behavior
+/// This implementation properly handles all collision types while still ensuring
+/// objects don't fall through the floor
 pub fn detect_collisions(bodies: &mut BodyStorage<RigidBody>, events_queue: &mut crate::core::EventQueue) {
     // First, gather all bodies that can collide
     let mut body_list = Vec::new();
@@ -216,16 +216,16 @@ pub fn detect_collisions(bodies: &mut BodyStorage<RigidBody>, events_queue: &mut
                         // Normal always points up for floor collisions
                         let normal = Vector3::new(0.0, 1.0, 0.0);
 
-                        // Always add extra penetration for super-stable floor collisions
+                        // Calculate a proper physics-based penetration response
                         let penetration = if vertical_distance < 0.0 {
-                            -vertical_distance + 0.5  // Add a large buffer when below
+                            -vertical_distance + 0.01  // Small buffer to prevent jitter
                         } else {
-                            0.2  // Substantial lift even when above
+                            0.0  // No correction if not penetrating
                         };
 
-                        // Apply ultra-aggressive correction with 5x penetration
-                        // This ensures objects absolutely never fall through the floor
-                        let correction = normal * penetration * 5.0;
+                        // Apply reasonable correction with slight bias (1.2x) to ensure stability
+                        // This is a physically reasonable value
+                        let correction = normal * penetration * 1.2;
 
                         if let Ok(body) = bodies.get_body_mut(sphere_handle) {
                             // Update position - apply full correction immediately
@@ -237,27 +237,30 @@ pub fn detect_collisions(bodies: &mut BodyStorage<RigidBody>, events_queue: &mut
 
                             // If object is moving down (into the floor)
                             if vel.y < 0.0 {
-                                // No bounce at all for maximum stability
-                                let restitution = 0.0;  // Override restitution to zero
+                                // Use the actual material restitution for natural bouncing
+                                let restitution = sphere_restitution;
 
-                                // Just stop vertical movement completely
+                                // Calculate the correctly reflected velocity using physics formulas
                                 let mut new_vel = vel;
 
-                                // Zero out vertical velocity to prevent bouncing
+                                // Apply a proper velocity reflection based on the normal
                                 if new_vel.y < 0.0 {
-                                    new_vel.y = 0.0;
+                                    // This is the standard physics formula for collision response
+                                    new_vel.y = -new_vel.y * restitution;
                                 }
 
-                                // Apply extreme horizontal friction to prevent sliding
-                                new_vel.x *= 0.5;
-                                new_vel.z *= 0.5;
+                                // Apply moderate horizontal friction based on material properties
+                                // 0.9 is a reasonable value for most surfaces
+                                let friction = 0.9;
+                                new_vel.x *= friction;
+                                new_vel.z *= friction;
 
                                 // Set the modified velocity
                                 body.set_linear_velocity(new_vel);
 
-                                // Almost completely stop rotation to prevent rolling
+                                // Apply moderate angular damping for natural motion
                                 let ang_vel = body.get_angular_velocity();
-                                body.set_angular_velocity(ang_vel * 0.2);
+                                body.set_angular_velocity(ang_vel * 0.95);
                             }
 
                             // Mark this body as already corrected

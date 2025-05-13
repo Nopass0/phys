@@ -66,19 +66,19 @@ fn setup(
     let mut physics_world = PhysicsWorld::new();
     physics_world.set_gravity(GravityType::Constant(Vector3::new(0.0, -9.81, 0.0)));
 
-    // Set ultra-stable simulation parameters to prevent any jitter or instability
+    // Set reasonable simulation parameters that balance realism and stability
     let mut config = physics_world.get_config_mut();
-    config.position_iterations = 50;      // High position iterations for maximum stability
-    config.velocity_iterations = 30;      // High velocity iterations for stable contacts
-    config.collision_margin = 0.02;       // Small collision margin for accurate collisions
-    config.contact_penetration_threshold = 0.0001;  // Very small penetration threshold for early detection
-    config.constraint_bias_factor = 0.2;  // Conservative bias factor to prevent overshooting
-    config.erp_factor = 0.2;             // Low ERP for gradual correction without bouncing
-    config.cfm_factor = 0.00001;         // Very small CFM for rigid constraints
+    config.position_iterations = 10;      // Standard position iterations
+    config.velocity_iterations = 8;       // Standard velocity iterations
+    config.collision_margin = 0.01;       // Small collision margin for accurate collisions
+    config.contact_penetration_threshold = 0.001;  // Standard penetration threshold
+    config.constraint_bias_factor = 0.2;  // Standard bias factor
+    config.erp_factor = 0.2;             // Standard ERP value
+    config.cfm_factor = 0.00001;         // Standard CFM value
     config.use_ccd = true;               // Enable continuous collision detection
-    config.restitution_velocity_threshold = 0.1;  // Higher threshold to reduce bouncing
-    config.max_substeps = 8;             // More substeps for smoother simulation
-    config.time_step = 1.0/240.0;        // Very small timestep for accuracy
+    config.restitution_velocity_threshold = 0.05;  // Standard threshold
+    config.max_substeps = 4;             // Standard substeps
+    config.time_step = 1.0/60.0;         // Standard timestep
 
     // Create two thick platforms stacked for better stability
 
@@ -140,16 +140,16 @@ fn setup(
         (Material::wood(), Color::rgb(0.2, 0.2, 0.8)),   // Blue wood
     ];
 
-    // Spawn just 3 balls for maximum stability
-    for i in 0..3 {
-        // Place balls with maximum separation and no randomness
-        let positions = [
-            Vector3::new(-5.0, 8.0, 0.0),
-            Vector3::new(0.0, 8.0, 0.0),
-            Vector3::new(5.0, 8.0, 0.0),
-        ];
+    // Spawn 15 balls to demonstrate proper physics behavior
+    for i in 0..15 {
+        // Place balls in a 3D grid formation with some randomness
+        let row = i / 5;
+        let col = i % 5;
+        let x = (col as f32 * 2.0) - 4.0 + (rand::random::<f32>() * 0.5 - 0.25);
+        let y = 5.0 + (row as f32 * 2.0) + (rand::random::<f32>() * 0.5);
+        let z = (rand::random::<f32>() * 2.0) - 1.0;
 
-        let position = positions[i];
+        let position = Vector3::new(x, y, z);
         
         // Choose a material
         let material_index = i % materials_list.len();
@@ -161,25 +161,28 @@ fn setup(
         let ball_shape = Arc::new(Sphere::new(radius));
         let mut ball = RigidBody::new_dynamic(ball_shape, position);
 
-        // Use a more stable material with almost no bounce
+        // Use a physically realistic material
         let custom_material = Material::new(
-            phys_material.density * 5.0, // High density for stability
-            0.95, // High friction to prevent sliding
-            0.0   // Zero restitution - no bounce at all
+            phys_material.density, // Normal density for realistic behavior
+            0.8, // Moderate friction
+            0.4  // Moderate restitution for some bounce
         );
 
         // Enable CCD (Continuous Collision Detection) for this ball
         ball.set_ccd_enabled(true);
         ball.set_material(custom_material);
         
-        // Add very minimal initial velocity with no vertical component
-        let vx = (rand::random::<f32>() * 0.1) - 0.05; // Extremely small horizontal velocity
+        // Add reasonable initial velocities for interesting physics interactions
+        let vx = (rand::random::<f32>() * 2.0) - 1.0; // Moderate random horizontal velocity
         let vy = 0.0; // No initial vertical velocity
-        let vz = (rand::random::<f32>() * 0.1) - 0.05; // Extremely small horizontal velocity
+        let vz = (rand::random::<f32>() * 2.0) - 1.0; // Moderate random horizontal velocity
         ball.set_linear_velocity(Vector3::new(vx, vy, vz));
 
-        // No initial rotation for maximum stability
-        ball.set_angular_velocity(Vector3::new(0.0, 0.0, 0.0));
+        // Add some initial rotation for natural movement
+        let rot_x = (rand::random::<f32>() * 0.2) - 0.1;
+        let rot_y = (rand::random::<f32>() * 0.2) - 0.1;
+        let rot_z = (rand::random::<f32>() * 0.2) - 0.1;
+        ball.set_angular_velocity(Vector3::new(rot_x, rot_y, rot_z));
         
         // Add to the world
         let handle = physics_world.add_body(ball);
@@ -196,7 +199,7 @@ fn setup(
                     base_color: color,
                     ..default()
                 }),
-                transform: Transform::from_xyz(x, y, z),
+                transform: Transform::from_xyz(position.x, position.y, position.z),
                 ..default()
             },
             PhysicsBody {
@@ -226,13 +229,8 @@ fn physics_step(
     let num_substeps = (dt / FIXED_TIMESTEP).ceil() as u32;
     let substep_dt = dt / num_substeps as f32;
 
-    // For absolutely stable simulation, use very small steps
-    const MICRO_STEP: f32 = 1.0 / 1000.0;  // 1/1000th of a second
-    let num_micro_steps = (dt / MICRO_STEP).ceil() as i32;
-
-    for _ in 0..num_micro_steps {
-        physics.world.step(MICRO_STEP);
-    }
+    // Use standard physics timestep for realistic behavior
+    physics.world.step(dt);
 }
 
 fn update_transforms(

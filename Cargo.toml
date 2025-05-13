@@ -21,6 +21,8 @@ serde = { version = "1.0.197", features = ["derive"], optional = true }
 rand = "0.8.5"
 criterion = "0.5.1"
 bevy = "0.13.0"
+crossterm = "0.27.0"
+term_size = "0.3.2"
 
 [features]
 default = []
@@ -40,4 +42,34 @@ required-features = []
 [[example]]
 name = "bevy_stack"
 path = "examples/bevy_stack.rs"
+required-features = []
+
+[[example]]
+name = "console_balls"
+path = "examples/console_balls.rs"
+required-features = []
+
+[[example]]
+name = "ascii_bounce"
+path = "examples/ascii_bounce.rs"
+required-features = []
+
+[[example]]
+name = "advanced_physics_console"
+path = "examples/advanced_physics_console.rs"
+required-features = []
+
+[[example]]
+name = "ascii_raytracer"
+path = "examples/ascii_raytracer.rs"
+required-features = []
+
+[[example]]
+name = "laser_reflection"
+path = "examples/laser_reflection.rs"
+required-features = []
+
+[[example]]
+name = "simple_laser_reflection"
+path = "examples/simple_laser_reflection.rs"
 required-features = []

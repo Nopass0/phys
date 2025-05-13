@@ -5,6 +5,7 @@ pub mod events;
 mod island;
 mod scheduler;
 pub mod detect_collisions;
+pub mod body_tracker;
 
 pub use self::world::PhysicsWorld;
 pub use self::config::SimulationConfig;
@@ -12,6 +13,7 @@ pub use self::storage::{BodyStorage, ConstraintStorage, Storage};
 pub use self::events::{EventQueue, CollisionEvent, BodyEvent};
 pub use self::island::Island;
 pub use self::scheduler::SimulationScheduler;
+pub use self::body_tracker::{BodyTracker, BodyEventTrigger, BodyEventData, EventCondition};
 
 use crate::math::Vector3;
 
