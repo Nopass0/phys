@@ -1,0 +1,32 @@
+[package]
+name = "phys-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Author"]
+description = "Physics engine library for game development"
+license = "MIT"
+repository = "https://github.com/username/phys-engine"
+readme = "README.md"
+keywords = ["physics", "game", "simulation", "engine", "collision"]
+categories = ["game-engines", "simulation"]
+
+[dependencies]
+nalgebra = "0.32.3"
+approx = "0.5.1"
+thiserror = "1.0.56"
+bitflags = "2.4.1"
+serde = { version = "1.0.197", features = ["derive"], optional = true }
+
+[dev-dependencies]
+rand = "0.8.5"
+criterion = "0.5.1"
+
+[features]
+default = []
+serialize = ["serde", "nalgebra/serde-serialize"]
+parallel = []
+
+# Benchmarks are commented out until we create the benchmark files
+# [[bench]]
+# name = "physics_bench"
+# harness = false

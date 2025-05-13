@@ -1,0 +1,21 @@
+mod shape;
+mod sphere;
+pub mod box_shape;
+mod plane;
+mod capsule;
+mod cylinder;
+mod compound;
+mod mesh;
+mod convex_hull;
+mod height_field;
+
+pub use self::shape::Shape;
+pub use self::sphere::Sphere;
+pub use self::box_shape::BoxShape;
+pub use self::plane::Plane;
+pub use self::capsule::Capsule;
+pub use self::cylinder::Cylinder;
+pub use self::compound::Compound;
+pub use self::mesh::Mesh;
+pub use self::convex_hull::ConvexHull;
+pub use self::height_field::HeightField;
