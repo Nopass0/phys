@@ -1,0 +1,5 @@
+    /// Detects collisions between bodies
+    fn detect_collisions(&mut self) {
+        // Use the simplified collision detection that works with the existing codebase
+        crate::core::detect_collisions::detect_collisions(&mut self.bodies, &mut self.events);
+    }

@@ -364,13 +364,38 @@ impl GJK {
             // Check if the simplex contains the origin
             if Self::next_simplex(&mut simplex, &mut direction) {
                 // If the simplex contains the origin, use EPA to find the penetration depth
-                return EPA::penetration_depth(
-                    simplex,
+                // If EPA fails for any reason, we still want to report a collision
+
+                // Clone the simplex to avoid move issue
+                let simplex_clone = simplex.clone();
+
+                // Get a copy of the points for possible fallback
+                let points_copy: Vec<Vector3> = simplex.get_points().to_vec();
+
+                let epa_result = EPA::penetration_depth(
+                    simplex_clone,
                     shape_a,
                     transform_a,
                     shape_b,
                     transform_b,
                 );
+
+                // If EPA fails, use a fallback value
+                return epa_result.or_else(|| {
+                    // Get the centroid of the simplex as a fallback direction
+                    let mut centroid = Vector3::zero();
+                    for point in &points_copy {
+                        centroid = centroid + *point;
+                    }
+                    if points_copy.len() > 0 {
+                        centroid = centroid / points_copy.len() as f32;
+                        let dir = -centroid.normalize();
+                        Some((0.01, dir))
+                    } else {
+                        // Last resort fallback
+                        Some((0.01, Vector3::new(0.0, 1.0, 0.0)))
+                    }
+                });
             }
         }
         

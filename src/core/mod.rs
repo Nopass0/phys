@@ -1,9 +1,10 @@
-mod world;
-mod config;
-mod storage;
-mod events;
+pub mod world;
+pub mod config;
+pub mod storage;
+pub mod events;
 mod island;
 mod scheduler;
+pub mod detect_collisions;
 
 pub use self::world::PhysicsWorld;
 pub use self::config::SimulationConfig;
@@ -15,7 +16,7 @@ pub use self::scheduler::SimulationScheduler;
 use crate::math::Vector3;
 
 /// A unique identifier for a body in the physics world
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BodyHandle(pub(crate) u32);
 
 /// A unique identifier for a constraint in the physics world

@@ -6,15 +6,18 @@ use std::collections::VecDeque;
 pub enum CollisionEventType {
     /// Bodies have just started colliding
     Begin,
-    
+
     /// Bodies are still colliding (persisting contact)
     Persist,
-    
+
     /// Bodies have just stopped colliding
     End,
-    
+
     /// Bodies experienced a collision impulse (used for audio/visual effects)
     Impulse,
+
+    /// Continuous collision detection event (high-speed collision)
+    CCD,
 }
 
 /// A collision event between two bodies

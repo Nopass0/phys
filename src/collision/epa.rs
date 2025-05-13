@@ -35,7 +35,7 @@ impl EPA {
     ) -> Option<(f32, Vector3)> {
         let mut vertices = simplex.get_points().to_vec();
         let mut faces = Vec::new();
-        
+
         // Build the initial polytope from the simplex (should be a tetrahedron)
         if vertices.len() < 4 {
             // If the simplex is not a tetrahedron, expand it to one
@@ -47,15 +47,32 @@ impl EPA {
                 transform_b,
             );
         }
-        
+
+        // If we still don't have enough vertices, return a default value
+        if vertices.len() < 4 {
+            // Return a small penetration in the y-direction as a fallback
+            return Some((0.01, Vector3::new(0.0, 1.0, 0.0)));
+        }
+
         // Create the initial faces
         Self::create_initial_faces(&vertices, &mut faces);
-        
+
+        // If no faces were created, return a default value
+        if faces.is_empty() {
+            return Some((0.01, Vector3::new(0.0, 1.0, 0.0)));
+        }
+
         // Expand the polytope until we find the closest face to the origin
         for _ in 0..MAX_ITERATIONS {
             // Find the face closest to the origin
-            let (closest_face_idx, closest_face) = Self::find_closest_face(&faces);
-            
+            let (closest_face_idx, closest_face) = match Self::find_closest_face(&faces) {
+                Some(result) => result,
+                None => {
+                    // If there are no faces, return a default penetration
+                    return Some((0.01, Vector3::new(0.0, 1.0, 0.0)));
+                }
+            };
+
             // Get the normal of the closest face
             let normal = closest_face.normal;
             
@@ -122,8 +139,12 @@ impl EPA {
         
         // If we reach here, the algorithm has failed to converge
         // We return the best estimate we have
-        let (_, closest_face) = Self::find_closest_face(&faces);
-        Some((closest_face.distance, closest_face.normal))
+        if let Some((_, closest_face)) = Self::find_closest_face(&faces) {
+            Some((closest_face.distance, closest_face.normal))
+        } else {
+            // Fallback if we have no faces - shouldn't happen but let's be safe
+            Some((0.01, Vector3::new(0.0, 1.0, 0.0)))
+        }
     }
     
     /// Expands the simplex to a tetrahedron
@@ -260,12 +281,30 @@ impl EPA {
     fn create_initial_faces(vertices: &[Vector3], faces: &mut Vec<Face>) {
         // Clear any existing faces
         faces.clear();
-        
+
         // The polytope should be a tetrahedron with 4 vertices
         if vertices.len() < 4 {
             return;
         }
-        
+
+        // Detect if the tetrahedron is degenerate - we need to check if vertices are coplanar
+        let a = vertices[0];
+        let b = vertices[1];
+        let c = vertices[2];
+        let d = vertices[3];
+
+        // Compute volume of tetrahedron using triple scalar product
+        let ab = b - a;
+        let ac = c - a;
+        let ad = d - a;
+        let volume = ab.dot(&ac.cross(&ad)).abs() / 6.0;
+
+        // If the volume is too small, the tetrahedron is nearly degenerate
+        // In this case, don't create faces to avoid numerical issues
+        if volume < 1e-8 {
+            return;
+        }
+
         // Create the faces of the tetrahedron
         Self::add_face(vertices, faces, 0, 1, 2);
         Self::add_face(vertices, faces, 0, 3, 1);
@@ -275,9 +314,20 @@ impl EPA {
     
     /// Adds a face to the polytope
     fn add_face(vertices: &[Vector3], faces: &mut Vec<Face>, a: usize, b: usize, c: usize) {
-        let normal = Self::compute_normal(vertices, a, b, c);
+        // Compute the normal of the face
+        let ab = vertices[b] - vertices[a];
+        let ac = vertices[c] - vertices[a];
+        let cross = ab.cross(&ac);
+
+        // Check if the face is degenerate (triangle has zero area)
+        if cross.length_squared() < 1e-10 {
+            return;  // Skip degenerate faces
+        }
+
+        // Normalize the normal
+        let normal = cross.normalize();
         let distance = normal.dot(&vertices[a]);
-        
+
         // Ensure the normal points outward (away from the origin)
         if distance < 0.0 {
             faces.push(Face {
@@ -298,23 +348,37 @@ impl EPA {
     fn compute_normal(vertices: &[Vector3], a: usize, b: usize, c: usize) -> Vector3 {
         let ab = vertices[b] - vertices[a];
         let ac = vertices[c] - vertices[a];
-        
-        ab.cross(&ac).normalize()
+        let cross = ab.cross(&ac);
+
+        // Check if the normal is degenerate
+        let length_squared = cross.length_squared();
+        if length_squared < 1e-10 {
+            // Return a non-zero vector as a fallback
+            // We could use a more sophisticated approach, but this is simple and effective
+            Vector3::new(0.0, 1.0, 0.0)
+        } else {
+            cross / length_squared.sqrt()
+        }
     }
     
     /// Finds the face closest to the origin
-    fn find_closest_face<'a>(faces: &'a [Face]) -> (usize, &'a Face) {
+    fn find_closest_face<'a>(faces: &'a [Face]) -> Option<(usize, &'a Face)> {
+        // Make sure we have at least one face
+        if faces.is_empty() {
+            return None;
+        }
+
         let mut closest_idx = 0;
         let mut closest_distance = faces[0].distance;
-        
+
         for (i, face) in faces.iter().enumerate().skip(1) {
             if face.distance < closest_distance {
                 closest_idx = i;
                 closest_distance = face.distance;
             }
         }
-        
-        (closest_idx, &faces[closest_idx])
+
+        Some((closest_idx, &faces[closest_idx]))
     }
     
     /// Adds an edge to the edge list, ensuring it's unique

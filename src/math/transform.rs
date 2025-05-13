@@ -141,6 +141,23 @@ impl Transform {
         rotated + self.position
     }
 
+    /// Transforms a point from world space to local space
+    #[inline]
+    pub fn transform_point_inverse(&self, point: Vector3) -> Vector3 {
+        // First subtract the position
+        let translated = point - self.position;
+
+        // Then apply inverse rotation
+        let rotated = self.rotation.conjugate().rotate_vector(translated);
+
+        // Then apply inverse scale
+        Vector3::new(
+            if self.scale.x.abs() > crate::math::EPSILON { rotated.x / self.scale.x } else { rotated.x },
+            if self.scale.y.abs() > crate::math::EPSILON { rotated.y / self.scale.y } else { rotated.y },
+            if self.scale.z.abs() > crate::math::EPSILON { rotated.z / self.scale.z } else { rotated.z },
+        )
+    }
+
     /// Transforms a direction vector by this transform (ignoring translation)
     #[inline]
     pub fn transform_direction(&self, direction: Vector3) -> Vector3 {

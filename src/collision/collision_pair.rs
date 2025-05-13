@@ -2,11 +2,11 @@ use crate::core::BodyHandle;
 use crate::collision::contact_manifold::ContactManifold;
 
 /// A pair of bodies that could potentially collide
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CollisionPair {
     /// The first body in the collision pair
     pub body_a: BodyHandle,
-    
+
     /// The second body in the collision pair
     pub body_b: BodyHandle,
 }

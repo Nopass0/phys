@@ -1,0 +1,116 @@
+    fn detect_collisions(&mut self) {
+        // Use helper function from detect_collisions module that's compatible with existing code
+        crate::core::detect_collisions::detect_collisions(&mut self.bodies, &mut self.events);
+    }
+
+        // Process the manifolds with the sequential impulse solver
+        use crate::collision::contact_solver::SequentialImpulseSolver;
+
+        let mut solver = SequentialImpulseSolver::new(
+            self.config.constraint_bias_factor,
+            self.config.restitution_velocity_threshold,
+        );
+
+        // Prepare the solver with the contact constraints
+        solver.prepare(&mut manifolds.clone(), &self.bodies);
+
+        // Solve velocity constraints
+        for _ in 0..self.config.velocity_iterations {
+            solver.solve_velocity(&mut manifolds.clone(), &mut self.bodies, self.config.time_step);
+        }
+
+        // Solve position constraints
+        for _ in 0..self.config.position_iterations {
+            solver.solve_position(&mut manifolds.clone(), &mut self.bodies, self.config.time_step);
+        }
+
+        // Process collision events
+        for manifold in &manifolds {
+            let body_a = manifold.pair.body_a;
+            let body_b = manifold.pair.body_b;
+
+            // Skip if both bodies are static
+            let body_a_type = match self.bodies.get(body_a) {
+                Some(body) => body.get_body_type(),
+                None => continue,
+            };
+
+            let body_b_type = match self.bodies.get(body_b) {
+                Some(body) => body.get_body_type(),
+                None => continue,
+            };
+
+            if body_a_type == crate::bodies::RigidBodyType::Static &&
+               body_b_type == crate::bodies::RigidBodyType::Static {
+                continue;
+            }
+
+            // Check if either body generates collision events
+            let body_a_generates = match self.bodies.get(body_a) {
+                Some(body) => body.generates_collision_events(),
+                None => false,
+            };
+
+            let body_b_generates = match self.bodies.get(body_b) {
+                Some(body) => body.generates_collision_events(),
+                None => false,
+            };
+
+            if body_a_generates || body_b_generates {
+                // Add collision event
+                use crate::core::events::{CollisionEvent, CollisionEventType};
+
+                let event_type = if manifold.is_new_collision() {
+                    CollisionEventType::Begin
+                } else {
+                    CollisionEventType::Stay
+                };
+
+                let event = CollisionEvent {
+                    body_a,
+                    body_b,
+                    event_type,
+                    contact_point: manifold.contacts.first().map(|c| crate::core::ContactPoint {
+                        position: c.position,
+                        normal: manifold.normal,
+                        penetration: c.penetration,
+                    }),
+                };
+
+                self.events.add_collision_event(event);
+            }
+        }
+
+        // Process collision end events
+        for (pair, state) in detector.get_collision_states() {
+            if state.is_collision_end() {
+                let body_a = pair.body_a;
+                let body_b = pair.body_b;
+
+                // Check if either body generates collision events
+                let body_a_generates = match self.bodies.get(body_a) {
+                    Some(body) => body.generates_collision_events(),
+                    None => false,
+                };
+
+                let body_b_generates = match self.bodies.get(body_b) {
+                    Some(body) => body.generates_collision_events(),
+                    None => false,
+                };
+
+                if body_a_generates || body_b_generates {
+                    // Add collision end event
+                    use crate::core::events::{CollisionEvent, CollisionEventType};
+
+                    let event = CollisionEvent {
+                        body_a,
+                        body_b,
+                        event_type: CollisionEventType::End,
+                        contact_point: None,
+                    };
+
+                    self.events.add_collision_event(event);
+                }
+            }
+        }
+    }

@@ -161,11 +161,11 @@ impl ContactSolver for SequentialImpulseSolver {
                     manifold.restitution
                 };
 
-                // Calculate the velocity bias
-                let bias = 0.0;
-                // In a real implementation, we would calculate a velocity bias based on
-                // penetration depth to prevent bodies from sinking into each other
-                // let bias = -self.bias_factor * contact.penetration / dt;
+                // Calculate the velocity bias - FIXED to use actual bias calculation
+                // The bias factor will help prevent penetration by applying velocity correction
+                let bias = -self.bias_factor * contact.penetration / dt;
+                // Use higher bias for severe penetrations
+                let bias = if contact.penetration > 0.05 { bias * 2.0 } else { bias };
 
                 // Calculate the normal impulse
                 let j_n = -(1.0 + restitution) * normal_vel * normal_mass_inv + bias;
@@ -327,10 +327,13 @@ impl ContactSolver for SequentialImpulseSolver {
 
                 let normal_mass_inv = 1.0 / normal_mass;
 
-                // Calculate the position correction
-                let slop = 0.01; // Penetration slop
+                // Calculate the position correction with zero slop for maximum accuracy
+                let slop = 0.0; // No slop for most aggressive correction possible
                 let penetration = (contact.penetration - slop).max(0.0);
-                let correction = penetration * normal_mass_inv * self.bias_factor;
+                // Use extremely aggressive position correction with maximum bias factor
+                let correction = penetration * normal_mass_inv * (self.bias_factor * 3.0);
+                // Quadruple the correction for severe penetrations
+                let correction = if contact.penetration > 0.05 { correction * 4.0 } else { correction };
 
                 // Calculate the correction impulse
                 let correction_impulse = normal * correction;

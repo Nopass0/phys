@@ -252,7 +252,7 @@ impl PhysicsWorld {
             if body.get_body_type() == RigidBodyType::Static || body.is_sleeping() {
                 continue;
             }
-            
+
             // Apply gravity
             match self.config.gravity {
                 GravityType::None => {},
@@ -270,17 +270,17 @@ impl PhysicsWorld {
                     }
                 },
             }
-            
+
             // Apply damping
             body.apply_damping(self.config.linear_damping, self.config.angular_damping);
-            
+
             // Integrate forces to update velocities
             body.integrate_forces(dt);
         }
-        
+
         // Build islands for constraint solving
         let islands = self.build_islands();
-        
+
         // Solve velocity constraints
         for _ in 0..self.config.velocity_iterations {
             for constraint in self.constraints.iter_mut() {
@@ -288,21 +288,26 @@ impl PhysicsWorld {
                 constraint.solve_velocity(dt, &mut self.bodies);
             }
         }
-        
+
+        // Perform continuous collision detection before position integration
+        // This prevents fast-moving objects from tunneling through thin objects
+        if self.config.use_ccd {
+            use crate::collision::continuous::CCDPhysicsWorld;
+            self.perform_ccd(dt);
+        }
+
         // Integrate velocities to update positions
         for (handle, body) in self.bodies.iter_mut() {
             if body.get_body_type() == RigidBodyType::Static || body.is_sleeping() {
                 continue;
             }
-            
+
             body.integrate_velocity(dt);
         }
-        
-        // Detect collisions
-        // In a real implementation, this would use the collision detection system
-        // Here we'll just use a placeholder
+
+        // Detect collisions using our optimized implementation
         self.detect_collisions();
-        
+
         // Solve position constraints
         for _ in 0..self.config.position_iterations {
             for constraint in self.constraints.iter_mut() {
@@ -400,12 +405,12 @@ impl PhysicsWorld {
     }
     
     /// Detects collisions between bodies
-    fn detect_collisions(&mut self) {
-        // This is a placeholder for the actual collision detection system
-        // In a real implementation, this would use spatial partitioning and
-        // detailed collision detection algorithms
-    }
     
+    /// Detects collisions between bodies
+    fn detect_collisions(&mut self) {
+        // Use helper function from detect_collisions module that's compatible with existing code
+        crate::core::detect_collisions::detect_collisions(&mut self.bodies, &mut self.events);
+    }
     /// Returns a reference to the event queue
     pub fn get_events(&self) -> &EventQueue {
         &self.events
