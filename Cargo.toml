@@ -18,11 +18,7 @@ bitflags = "2.4.1"
 serde = { version = "1.0.197", features = ["derive"], optional = true }
 
 [dev-dependencies]
-rand = "0.8.5"
-criterion = "0.5.1"
-bevy = "0.13.0"
-crossterm = "0.27.0"
-term_size = "0.3.2"
+# Development dependencies are omitted to allow offline testing
 
 [features]
 default = []
